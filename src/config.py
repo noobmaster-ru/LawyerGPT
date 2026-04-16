@@ -18,9 +18,9 @@ class Config(BaseModel):
     def from_yaml(cls, path: str) -> "Config":
         data = cls()._load_yaml(path) if os.path.exists(path) else {}
 
-        data['base_url'] = os.getenv('X5_API_BASE_URL', data.get('base_url', ''))
-        data['model'] = os.getenv('X5_MODEL', data.get('model', ''))
-        data['password'] = os.getenv('X5_API_KEY', data.get('password', ''))
+        data['base_url'] = os.getenv('LLM_API_BASE_URL', data.get('base_url', ''))
+        data['model'] = os.getenv('LLM_MODEL', data.get('model', ''))
+        data['password'] = os.getenv('LLM_API_KEY', data.get('password', ''))
 
         return cls(**data)
 
@@ -52,3 +52,22 @@ def get_qdrant_settings() -> Dict[str, Union[str, int]]:
         'host': os.getenv('QDRANT_HOST', 'localhost'),
         'port': int(os.getenv('QDRANT_PORT', '6333')),
     }
+
+
+def get_embedding_device() -> str:
+    device = os.getenv('EMBEDDING_DEVICE')
+    if device:
+        return device
+    try:
+        import torch
+        if torch.backends.mps.is_available():
+            return 'mps'
+        if torch.cuda.is_available():
+            return 'cuda'
+    except Exception:
+        pass
+    return 'cpu'
+
+
+def get_max_model_len() -> int:
+    return int(os.getenv('LLM_MAX_MODEL_LEN', '8000'))

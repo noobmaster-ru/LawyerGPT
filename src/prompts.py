@@ -74,9 +74,11 @@ class SimplePrompts:
         return messages
 
 
+from src.config import get_max_model_len
+
 tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-7B-Instruct-AWQ", trust_remote_code=True)
-max_model_len=50_000
-max_gen_len=10_000
+max_model_len = get_max_model_len()
+max_gen_len = 1_000
 
 def is_prompt_too_long(prompt):
     n_prompt_tokens = len(tokenizer.encode(prompt[0].content)) + len(tokenizer.encode(prompt[1].content))

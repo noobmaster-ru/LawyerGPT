@@ -136,9 +136,9 @@ class RagAgent(Agent):
             completion = self.so_llm_model.chat.completions.create(
                 model=settings.model,
                 messages=prompt,
-                extra_body=extra_body,
+                response_format={"type": "json_object"},
                 temperature=self.reranker_temperature,
-                max_tokens=10_000,
+                max_tokens=4_000,
             )
             res = json.loads(completion.choices[0].message.content)
 
@@ -175,7 +175,7 @@ class RagAgent(Agent):
         completion = self.so_llm_model.chat.completions.create(
             model=settings.model,
             messages=prompt,
-            extra_body=extra_body,
+            response_format={"type": "json_object"},
             temperature=self.answer_temperature,
             max_tokens=500,
         )

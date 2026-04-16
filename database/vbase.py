@@ -12,7 +12,7 @@ import pickle
 from tqdm import tqdm
 
 from database.psql_base import PostgresBase
-from src.config import get_qdrant_settings
+from src.config import get_qdrant_settings, get_embedding_device
 from src.logging_conf import logger
 
 
@@ -71,9 +71,11 @@ class QdrantLegalRAG:
             collection_prefix: префикс для названий коллекций
         """
         self.client = QdrantClient(host=host, port=port, timeout=timeout)
+        device = get_embedding_device()
+        logger.info(f"SentenceTransformer device: {device}")
         self.encoder = SentenceTransformer(
             'BAAI/bge-m3',
-            device='cpu',
+            device=device,
             model_kwargs={'low_cpu_mem_usage': False},
         )
         # Коллекции
