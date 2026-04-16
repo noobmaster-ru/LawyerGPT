@@ -10,3 +10,5 @@ chats.pl
 settings.json
 database/pgdata/
 .DS_Store
+.venv
+lawyergpt.egg-info/
