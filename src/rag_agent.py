@@ -140,22 +140,28 @@ class RagAgent(Agent):
                 temperature=self.reranker_temperature,
                 max_tokens=4_000,
             )
-            res = json.loads(completion.choices[0].message.content)
+            raw = completion.choices[0].message.content
+            try:
+                res = json.loads(raw)
+                estimation = int(res.get('estimation', res.get('score', 0)))
+                summarize = res.get('summarize', res.get('summary', ''))
+            except (json.JSONDecodeError, ValueError, TypeError) as e:
+                logger.warning('RERANKER parse error: %s\nRAW: %s', e, raw)
+                continue
 
-            logger.info('RERANKER: %s\nSCORE: %s\nTEXT:%s\n\n' % (title, res['estimation'], res['summarize']))
+            logger.info('RERANKER: %s\nSCORE: %s\nTEXT:%s\n\n' % (title, estimation, summarize))
             
             if not self.reranker_enable:
                 filtered_articles.append({
                     'title': title,
-                    'text': res['summarize'],
+                    'text': summarize,
                     'relevance_score': 0
                 })
-            
-            elif int(res['estimation']) > 0:
+            elif estimation > 0:
                 filtered_articles.append({
                     'title': title,
-                    'text': res['summarize'],
-                    'relevance_score': int(res['estimation'])
+                    'text': summarize,
+                    'relevance_score': estimation
                 })
         return sorted(filtered_articles, key=lambda x: x['relevance_score'], reverse=True)
 

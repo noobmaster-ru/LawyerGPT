@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field
 
 load_dotenv()
 
+os.environ.setdefault('TOKENIZERS_PARALLELISM', 'false')
+
 
 class Config(BaseModel):
     base_url: str = Field(default='')
