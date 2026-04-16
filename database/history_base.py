@@ -4,13 +4,13 @@ from sqlalchemy import (
 )
 from sqlalchemy import delete 
 
+from src.config import get_database_url
 from src.logging_conf import logger
 
 
 class HistoryBase:
     def __init__(self):
-        database_url = "postgresql+psycopg2://legal_user:secret_password@localhost:5432/legal_db"
-        self.engine = create_engine(database_url, echo=False)
+        self.engine = create_engine(get_database_url(), echo=False)
         self.metadata = MetaData()
 
         schema = 'rag_history'

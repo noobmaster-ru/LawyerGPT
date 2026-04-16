@@ -12,6 +12,7 @@ import pickle
 from tqdm import tqdm
 
 from database.psql_base import PostgresBase
+from src.config import get_qdrant_settings
 from src.logging_conf import logger
 
 
@@ -57,7 +58,10 @@ class SearchResult(TypedDict):
 
 
 class QdrantLegalRAG:
-    def __init__(self, host: str = "localhost", port: int = 6333, collection_prefix: str = "legal", timeout=1000.0):
+    def __init__(self, host: str = None, port: int = None, collection_prefix: str = "legal", timeout=1000.0):
+        qdrant = get_qdrant_settings()
+        host = host or qdrant['host']
+        port = port or qdrant['port']
         """
         Инициализация клиента Qdrant и настройка коллекций
         

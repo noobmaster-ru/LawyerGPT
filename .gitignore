@@ -6,3 +6,6 @@ logs/*
 
 
 chats.pl
+.env
+settings.json
+database/pgdata/

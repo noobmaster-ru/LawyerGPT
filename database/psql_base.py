@@ -5,10 +5,12 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
 from sqlalchemy.orm import sessionmaker
 
+from src.config import get_database_url
+
+
 class PostgresBase:
     def __init__(self):
-        database_url = "postgresql+psycopg2://legal_user:secret_password@localhost:5432/legal_db"
-        self.engine = create_engine(database_url, echo=False)
+        self.engine = create_engine(get_database_url(), echo=False)
         self.metadata = MetaData()
 
         schemas = ['codes', 'federal_laws']
