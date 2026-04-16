@@ -71,7 +71,11 @@ class QdrantLegalRAG:
             collection_prefix: префикс для названий коллекций
         """
         self.client = QdrantClient(host=host, port=port, timeout=timeout)
-        self.encoder = SentenceTransformer('BAAI/bge-m3', device='cpu')
+        self.encoder = SentenceTransformer(
+            'BAAI/bge-m3',
+            device='cpu',
+            model_kwargs={'low_cpu_mem_usage': False},
+        )
         # Коллекции
         self.constitution_collection = f"{collection_prefix}_constitution"
         self.codes_collection = f"{collection_prefix}_codes"
@@ -137,9 +141,9 @@ class QdrantLegalRAG:
         logger.info("Заполнение векторной базы данных")
 
         # Добавление данных
-        rag_system.add_constitution_articles(constitution_articles)
-        rag_system.add_codes_articles(codes_articles)
-        rag_system.add_laws_articles(laws_articles)
+        self.add_constitution_articles(constitution_articles)
+        self.add_codes_articles(codes_articles)
+        self.add_laws_articles(laws_articles)
     
     def _create_embeddings(self, text: str, is_query: bool = False) -> np.ndarray:
         """

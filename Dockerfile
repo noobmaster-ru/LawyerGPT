@@ -5,6 +5,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     HF_HOME=/root/.cache/huggingface \
+    HF_HUB_ENABLE_HF_TRANSFER=1 \
     PYTHONPATH=/app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -18,7 +19,7 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --upgrade pip \
     && pip install -r requirements.txt \
-    && pip install python-dotenv PyYAML tqdm
+    && pip install python-dotenv PyYAML tqdm hf_transfer
 
 COPY . .
 
