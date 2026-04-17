@@ -1,3 +1,9 @@
+try:
+    import truststore
+    truststore.inject_into_ssl()
+except ImportError:
+    pass
+
 import streamlit as st
 import uuid
 from datetime import datetime

@@ -18,33 +18,22 @@ Cистема искусственного интеллекта, которая 
 - Доступ к OpenAI API или возможность локального запуска LLM
 - Docker
 
-### Клонирование репозитория
-```
-git clone https://github.com/yourusername/legal-rag-system.git
-cd legal-rag-system
-```
+
 
 ### Установка зависимостей
 ```pip install -r requirements.txt```
 
-### Запуск сервера с LLM (vLLM)
+### Запуск 
+
 ```
-export VLLM_ALLOW_LONG_MAX_MODEL_LEN=1
-vllm serve Qwen2.5-7B-AWQ \
-  --dtype auto \
-  --host 0.0.0.0 \
-  --port 2727 \
-  --api-key password \
-  --gpu-memory-utilization 0.90 \
-  --served-model-name Qwen2.5-7B-AWQ \
-  --max-model-len 50000 \
-  --enforce-eager
-```
+source .venv/bin/activate
+uv pip install -e .
+docker compose up -d postgres qdrant
+streamlit run src/streamlit_ui.py --server.address 127.0.0.1 ```
+
 
 ⚠️ **Так как некоторые статьи очень большие, рекомендуется использовать большое контекстное окно (>40k токенов)**
 
-### Запуск StreamLit
-```streamlit run src/streamlit_ui.py --server.address 127.0.0.1 ```
 
 ### Переходим на сайт
 ```http://localhost:8501/```

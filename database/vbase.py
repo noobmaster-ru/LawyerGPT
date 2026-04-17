@@ -12,7 +12,15 @@ import pickle
 from tqdm import tqdm
 
 from database.psql_base import PostgresBase
-from src.config import get_qdrant_settings, get_embedding_device
+from src.config import (
+    Config,
+    get_embedding_batch_size,
+    get_embedding_device,
+    get_embedding_dim,
+    get_embedding_model,
+    get_embedding_provider,
+    get_qdrant_settings,
+)
 from src.logging_conf import logger
 
 
@@ -71,13 +79,32 @@ class QdrantLegalRAG:
             collection_prefix: префикс для названий коллекций
         """
         self.client = QdrantClient(host=host, port=port, timeout=timeout)
-        device = get_embedding_device()
-        logger.info(f"SentenceTransformer device: {device}")
-        self.encoder = SentenceTransformer(
-            'BAAI/bge-m3',
-            device=device,
-            model_kwargs={'low_cpu_mem_usage': False},
+
+        provider = get_embedding_provider()
+        self.embedding_model = get_embedding_model()
+        self.embedding_batch_size = get_embedding_batch_size()
+        self.vector_dimension = get_embedding_dim()
+        logger.info(
+            f"Embedding provider={provider} model={self.embedding_model} dim={self.vector_dimension}"
         )
+
+        if provider == 'api':
+            from openai import OpenAI
+            _settings = Config.from_yaml('config.yaml')
+            self.encoder = None
+            self.api_client = OpenAI(
+                base_url=_settings.base_url,
+                api_key=_settings.password,
+            )
+        else:
+            device = get_embedding_device()
+            logger.info(f"SentenceTransformer device: {device}")
+            self.encoder = SentenceTransformer(
+                self.embedding_model,
+                device=device,
+                model_kwargs={'low_cpu_mem_usage': False},
+            )
+            self.api_client = None
         # Коллекции
         self.constitution_collection = f"{collection_prefix}_constitution"
         self.codes_collection = f"{collection_prefix}_codes"
@@ -91,11 +118,7 @@ class QdrantLegalRAG:
             length_function=len,
             separators=["\n\n", "\n", ".", " ", ""]
         )
-        
-        # Размерность векторов модели
-        self.vector_dimension = 1024
-        
-        # Инициализируем коллекции
+
         self._initialize_collections()
     
     def _initialize_collections(self):
@@ -147,19 +170,39 @@ class QdrantLegalRAG:
         self.add_codes_articles(codes_articles)
         self.add_laws_articles(laws_articles)
     
-    def _create_embeddings(self, text: str, is_query: bool = False) -> np.ndarray:
+    def _create_embeddings(self, text, is_query: bool = False) -> np.ndarray:
         """
-        Создание эмбеддингов для текстов
-        
-        Args:
-            texts: список текстов для векторизации
-            
-        Returns:
-            массив векторов
+        Создание эмбеддингов. Принимает либо одну строку, либо список строк.
+        Возвращает np.ndarray: shape (dim,) для одной, (n, dim) для списка.
         """
-        if is_query:
-            return self.encoder.encode(f'query: {text}')
-        return self.encoder.encode(f'passage: {text}')
+        single = isinstance(text, str)
+        texts = [text] if single else list(text)
+        if 'e5' in self.embedding_model.lower():
+            prefix = 'query: ' if is_query else 'passage: '
+            inputs = [prefix + t for t in texts]
+        else:
+            inputs = texts
+
+        if self.api_client is not None:
+            vectors = []
+            bs = self.embedding_batch_size
+            for i in range(0, len(inputs), bs):
+                batch = inputs[i:i + bs]
+                resp = self.api_client.embeddings.create(
+                    model=self.embedding_model,
+                    input=batch,
+                )
+                vectors.extend(d.embedding for d in resp.data)
+            arr = np.asarray(vectors, dtype=np.float32)
+        else:
+            arr = self.encoder.encode(
+                inputs[0] if single else inputs,
+                batch_size=self.embedding_batch_size,
+            )
+            if single:
+                return np.asarray(arr, dtype=np.float32)
+
+        return arr[0] if single else arr
     
     def _split_article_to_chunks(self, article_text: str) -> List[str]:
         """
@@ -186,8 +229,8 @@ class QdrantLegalRAG:
             # Разбиваем на чанки
             chunks = self._split_article_to_chunks(article['text'])
             
-            # Создаем эмбеддинги
-            embeddings = [self._create_embeddings(chunk) for chunk in chunks]
+            # Создаем эмбеддинги батчем
+            embeddings = self._create_embeddings(chunks) if len(chunks) > 1 else [self._create_embeddings(chunks[0])]
             
             # Создаем точки
             for chunk, embedding in zip(chunks, embeddings):
@@ -235,14 +278,14 @@ class QdrantLegalRAG:
             if article['text'] == '':
                 continue
             chunks = self._split_article_to_chunks(article['text'])
-            
-            # Создаем эмбеддинги для чанков
-            embeddings = [self._create_embeddings(chunk) for chunk in chunks]
-            
+
+            # Создаем эмбеддинги батчем
+            embeddings = self._create_embeddings(chunks) if len(chunks) > 1 else [self._create_embeddings(chunks[0])]
+
             # Создаем точки для каждого чанка
             for chunk, embedding in zip(chunks, embeddings):
                 point_id = str(uuid.uuid4())
-                
+
                 payload = {
                     'chunk_text': chunk,
                     'article_id': article_id,
@@ -284,14 +327,14 @@ class QdrantLegalRAG:
                 continue
             # Разбиваем статью на чанки
             chunks = self._split_article_to_chunks(article['text'])
-            
-            # Создаем эмбеддинги для чанков
-            embeddings = [self._create_embeddings(chunk) for chunk in chunks]
-            
+
+            # Создаем эмбеддинги батчем
+            embeddings = self._create_embeddings(chunks) if len(chunks) > 1 else [self._create_embeddings(chunks[0])]
+
             # Создаем точки для каждого чанка
             for chunk, embedding in zip(chunks, embeddings):
                 point_id = str(uuid.uuid4())
-                
+
                 payload = {
                     'chunk_text': chunk,
                     'article_id': article_id,

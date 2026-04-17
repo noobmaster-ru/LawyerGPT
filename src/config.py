@@ -73,3 +73,19 @@ def get_embedding_device() -> str:
 
 def get_max_model_len() -> int:
     return int(os.getenv('LLM_MAX_MODEL_LEN', '8000'))
+
+
+def get_embedding_provider() -> str:
+    return os.getenv('EMBEDDING_PROVIDER', 'local').lower()
+
+
+def get_embedding_model() -> str:
+    return os.getenv('EMBEDDING_MODEL', 'BAAI/bge-m3')
+
+
+def get_embedding_dim() -> int:
+    return int(os.getenv('EMBEDDING_DIM', '1024'))
+
+
+def get_embedding_batch_size() -> int:
+    return int(os.getenv('EMBEDDING_BATCH_SIZE', '64'))
